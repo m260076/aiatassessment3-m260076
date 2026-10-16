@@ -1,0 +1,34 @@
+                   
+                   
+┌─────────────────┐
+│ 4 Code Findings │
+└─────────────────┘
+                                        
+  [36m[22m[24m  src/LoginService.java[0m
+   ❯❯❱ semgrep.a3-hardcoded-credential
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Hardcoded credential detected (CWE-798). Usernames and passwords must not be stored as string
+          literals in source code — move them to a secure secret store or environment configuration.   
+                                                                                                       
+           21┆ private static final String ADMIN_USERNAME = "admin";
+            ⋮┆----------------------------------------
+           22┆ private static final String ADMIN_PASSWORD = "Sup3rSecret!";
+   
+    ❯❱ java.lang.security.audit.crypto.use-of-md5.use-of-md5
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected MD5 hash algorithm which is considered insecure. MD5 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use HMAC instead.                         
+          Details: https://sg.run/ryJn                                                                   
+                                                                                                         
+           ▶▶┆ Autofix ▶ "SHA-512"
+           49┆ MessageDigest md = MessageDigest.getInstance("MD5");
+   
+   ❯❯❱ java.lang.security.audit.formatted-sql-string.formatted-sql-string
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected a formatted string in a SQL statement. This could lead to SQL injection if variables in the
+          SQL statement are not properly sanitized. Use a prepared statements (java.sql.PreparedStatement)    
+          instead. You can obtain a PreparedStatement using 'connection.prepareStatement'.                    
+          Details: https://sg.run/OPXp                                                                        
+                                                                                                              
+           83┆ ResultSet rs = stmt.executeQuery(sql)) {
+

@@ -1,0 +1,16 @@
+{
+  "name": "BIT_ENG202 - Assessment 3 (Software Vulnerability Analysis)",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.java",
+        "vscjava.vscode-java-pack"
+      ]
+    }
+  },
+  "postCreateCommand": "echo '--- Tool versions ---' && java -version && echo && jbmc --version && echo && semgrep --version",
+  "waitFor": "postCreateCommand"
+}

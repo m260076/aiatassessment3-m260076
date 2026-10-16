@@ -1,0 +1,4 @@
+.DS_Store
+analysis-output/
+build/
+*.class

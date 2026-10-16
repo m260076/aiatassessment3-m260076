@@ -1,0 +1,17 @@
+rules:
+  - id: a3-hardcoded-credential
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Hardcoded credential detected (CWE-798). Usernames and passwords
+      must not be stored as string literals in source code — move them
+      to a secure secret store or environment configuration.
+    patterns:
+      - pattern: private static final String $VAR = "...";
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(password|username|passwd|secret).*
+    metadata:
+      cwe: CWE-798
+      references:
+        - https://cwe.mitre.org/data/definitions/798.html

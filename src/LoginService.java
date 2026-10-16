@@ -3,94 +3,141 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 /**
  * Handles member login for the membership store.
  *
  * Members normally authenticate against the users table in the database.
- * There is also a fallback admin account, used if the database is
- * unreachable, so store staff can still get in during an outage.
- *
- * NOTE FOR STUDENTS: this file is part of the application you are analysing.
- * You are not expected to have written it — your job is to find, verify, and
- * fix the vulnerability(ies) it contains.
+ * An optional fallback admin account can be configured using environment
+ * variables rather than storing credentials directly in source code.
  */
 public class LoginService {
 
-    private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_PASSWORD = "Sup3rSecret!";
+    private static final String ADMIN_USERNAME =
+            System.getenv("ADMIN_USERNAME");
+
+    private static final String ADMIN_PASSWORD =
+            System.getenv("ADMIN_PASSWORD");
 
     /**
-     * Full login entry point: tries the admin fallback first, then falls
-     * back to the real database-backed check.
+     * Full login entry point.
      */
-    public static boolean login(Connection conn, String username, String password) throws SQLException {
+    public static boolean login(
+            Connection conn,
+            String username,
+            String password) throws SQLException {
+
         if (isHardcodedAdmin(username, password)) {
             return true;
         }
+
         return authenticate(conn, username, password);
     }
 
     /**
-     * Checks the submitted credentials against the hardcoded admin fallback
-     * account. Returns true only for an exact username+password match.
+     * Checks submitted credentials against the optional administrator
+     * credentials supplied through environment variables.
      */
-    public static boolean isHardcodedAdmin(String username, String password) {
-        return ADMIN_USERNAME.equals(username) && ADMIN_PASSWORD.equals(password);
+    public static boolean isHardcodedAdmin(
+            String username,
+            String password) {
+
+        return ADMIN_USERNAME != null
+                && ADMIN_PASSWORD != null
+                && ADMIN_USERNAME.equals(username)
+                && ADMIN_PASSWORD.equals(password);
     }
 
     /**
-     * Hashes a plaintext password before storing/comparing it against the
-     * value held in the database.
+     * Hashes a plaintext password before comparing it with the value
+     * stored in the database.
+     *
+     * MD5 is intentionally unchanged at this stage so that the separate
+     * hashing weakness can still be analysed and verified.
      */
     public static String hashPassword(String plainPassword) {
+
         try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(plainPassword.getBytes());
+            MessageDigest md =
+                    MessageDigest.getInstance("MD5");
+
+            byte[] digest =
+                    md.digest(plainPassword.getBytes());
+
             StringBuilder sb = new StringBuilder();
+
             for (byte b : digest) {
                 sb.append(String.format("%02x", b));
             }
+
             return sb.toString();
+
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
 
     /**
-     * Builds the SQL statement used to look up a member by username and
-     * (hashed) password. Pulled out as its own method so it can be exercised
-     * directly, without needing a live database connection, to see exactly
-     * what SQL text would be sent.
+     * Returns the parameterised SQL statement used for authentication.
+     *
+     * User supplied values are not concatenated into the SQL command.
      */
-    public static String buildLoginQuery(String username, String password) {
-        String hashed = hashPassword(password);
-        return "SELECT * FROM users WHERE username = '" + username
-                + "' AND password = '" + hashed + "'";
+    public static String buildLoginQuery(
+            String username,
+            String password) {
+
+        return "SELECT * FROM users "
+                + "WHERE username = ? AND password = ?";
     }
 
     /**
-     * Full login path against the real database. Requires a live Connection
-     * (not needed for the static/Semgrep analysis, or for exercising
-     * buildLoginQuery directly — only relevant if you wire up an actual DB).
+     * Authenticates a member using a parameterised database query.
      */
-    public static boolean authenticate(Connection conn, String username, String password) throws SQLException {
+    public static boolean authenticate(
+            Connection conn,
+            String username,
+            String password) throws SQLException {
+
         String hashed = hashPassword(password);
-        String sql = "SELECT * FROM users WHERE username = '" + username
-                + "' AND password = '" + hashed + "'";
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            return rs.next();
+
+        String sql =
+                "SELECT * FROM users "
+                + "WHERE username = ? AND password = ?";
+
+        try (PreparedStatement stmt =
+                     conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+            stmt.setString(2, hashed);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 
-    // Simple manual entry point so the query-building logic can be run/tested
-    // standalone without needing a real database.
+    /**
+     * Manual entry point for testing the security behaviour without
+     * requiring a live database.
+     */
     public static void main(String[] args) {
+
+        if (args.length < 2) {
+            System.out.println(
+                    "Usage: java LoginService <username> <password>");
+            return;
+        }
+
         String username = args[0];
         String password = args[1];
-        System.out.println("Constructed SQL: " + buildLoginQuery(username, password));
-        System.out.println("Hardcoded admin match: " + isHardcodedAdmin(username, password));
+
+        System.out.println(
+                "Constructed SQL: "
+                        + buildLoginQuery(username, password));
+
+        System.out.println(
+                "Hardcoded admin match: "
+                        + isHardcodedAdmin(username, password));
     }
 }

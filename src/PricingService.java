@@ -25,8 +25,11 @@ public class PricingService {
      * parameter supplied directly by the caller.
      */
     public static double getDiscountForTier(int tierIndex) {
-        return TIER_DISCOUNTS[tierIndex];
+    if (tierIndex < 0 || tierIndex >= TIER_DISCOUNTS.length) {
+        throw new IllegalArgumentException("Invalid tier index. Valid range is 0 to 4.");
     }
+    return TIER_DISCOUNTS[tierIndex];
+}
 
     /**
      * Applies the tier discount to a price at checkout.
